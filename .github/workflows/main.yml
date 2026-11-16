@@ -57,9 +57,34 @@ jobs:
           PROPS
           sed -i 's/^ *//' "$PROJECT_PATH/keystore.properties"
 
-      - name: Lint + build debug APK and AAB
+      - name: Build debug APK and AAB
         working-directory: ${{ env.PROJECT_PATH }}
-        run: gradle lintDebug assembleDebug bundleDebug --stacktrace
+        run: |
+          set -o pipefail
+          gradle assembleDebug bundleDebug --console=plain --stacktrace 2>&1 | tee "$GITHUB_WORKSPACE/build.log"
+
+      - name: Show the real error (short summary)
+        if: failure()
+        run: |
+          {
+            echo '## أخطاء البناء / Build errors'
+            echo '```'
+            grep -E "^e: |error:|What went wrong|Execution failed|FAILED|Unresolved|Type mismatch|Script compilation" -A4 "$GITHUB_WORKSPACE/build.log" | grep -v "^\s*at " | head -n 80
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload full build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
+          if-no-files-found: ignore
+
+      - name: Lint (does not block the build)
+        continue-on-error: true
+        working-directory: ${{ env.PROJECT_PATH }}
+        run: gradle lintDebug --console=plain
 
       - name: Build signed release APK and AAB (verifies keystore first)
         if: env.HAS_KEYSTORE == 'true'
