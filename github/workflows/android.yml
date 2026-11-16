@@ -32,8 +32,10 @@ jobs:
 
       - name: Extract Project Zip
         run: |
-          if [ ! -f PlayCheck.zip ]; then echo "Error: PlayCheck.zip not found!"; exit 1; fi
-          unzip -q PlayCheck.zip -d extracted_project
+          ZIP=$(ls PlayCheck*.zip 2>/dev/null | head -n 1)
+          if [ -z "$ZIP" ]; then echo "Error: PlayCheck zip not found in repo root!"; ls -la; exit 1; fi
+          echo "Using $ZIP"
+          unzip -q "$ZIP" -d extracted_project
           PROJECT_DIR=$(dirname "$(find extracted_project -maxdepth 3 -name settings.gradle.kts | head -n 1)")
           if [ -z "$PROJECT_DIR" ] || [ "$PROJECT_DIR" = "." ]; then echo "Error: project not found"; exit 1; fi
           echo "PROJECT_PATH=$PROJECT_DIR" >> $GITHUB_ENV
